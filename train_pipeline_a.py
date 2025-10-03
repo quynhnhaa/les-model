@@ -7,6 +7,7 @@ import os
 import pathlib
 import time
 from datetime import datetime
+import json
 
 import numpy as np
 import pandas as pd
@@ -24,7 +25,7 @@ from src.dataset.batch_utils import determinist_collate
 from src.loss import EDiceLoss
 from src.models import get_norm_layer, DataAugmenter
 from src.utils import save_args, AverageMeter, ProgressMeter, reload_ckpt, save_checkpoint, reload_ckpt_bis, \
-    count_parameters, WeightSWA, save_metrics, generate_segmentations
+    count_parameters, WeightSWA, save_metrics, generate_segmentations, save_checkpoint_best, save_checkpoint_last
 
 parser = argparse.ArgumentParser(description='Pipeline A Training - Standard U-Net')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='Unet',
@@ -150,10 +151,7 @@ def main(args):
         optimizer = Ranger(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         rangered = True
 
-    # Resume from checkpoint if specified
-    if args.resume:
-        reload_ckpt(args, model, optimizer)
-
+    
     if args.debug:
         args.epochs = 2
         args.warm = 0
@@ -223,6 +221,10 @@ def main(args):
                                                                args.epochs + 30 if not rangered else round(
                                                                    args.epochs * 0.5))
     
+    # Resume from checkpoint if specified (after scheduler is created to restore its state)
+    if args.resume:
+        reload_ckpt(args, model, optimizer, scheduler)
+    
     print("Starting main Pipeline A training...")
     
     for epoch in range(args.start_epoch + args.warm, args.epochs + args.warm):
@@ -249,7 +251,7 @@ def main(args):
                 if validation_loss < best:
                     best = validation_loss
                     model_dict = model.state_dict()
-                    save_checkpoint(
+                    save_checkpoint_best(
                         dict(
                             epoch=epoch, arch=args.arch,
                             state_dict=model_dict,
@@ -257,6 +259,14 @@ def main(args):
                             scheduler=scheduler.state_dict(),
                         ),
                         save_folder=args.save_folder, )
+                    # persist best summary for comparison across resumes
+                    best_summary = {
+                        "epoch": int(epoch),
+                        "val_loss": float(validation_loss),
+                        "checkpoint": str(args.save_folder / "model_best.pth.tar")
+                    }
+                    with (args.save_folder / "best_summary.json").open("w") as f:
+                        json.dump(best_summary, f, indent=2)
 
                 ts = time.perf_counter()
                 print(f"Pipeline A - Val epoch done in {ts - te} s")
@@ -273,8 +283,8 @@ def main(args):
             print("Stopping Pipeline A training loop, doing benchmark")
             break
 
-    # Save final model
-    save_checkpoint(
+    # Save final model (last)
+    save_checkpoint_last(
         dict(
             epoch=args.epochs, arch=args.arch,
             state_dict=model.state_dict(),

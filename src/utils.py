@@ -40,9 +40,21 @@ def master_do(func, *args, **kwargs):
 
 
 def save_checkpoint(state: dict, save_folder: pathlib.Path):
-    """Save Training state."""
+    """Backward-compatible: Save as best checkpoint by default."""
     best_filename = f'{str(save_folder)}/model_best.pth.tar'
     torch.save(state, best_filename)
+
+
+def save_checkpoint_best(state: dict, save_folder: pathlib.Path):
+    """Save the best model checkpoint (improved validation)."""
+    best_filename = f'{str(save_folder)}/model_best.pth.tar'
+    torch.save(state, best_filename)
+
+
+def save_checkpoint_last(state: dict, save_folder: pathlib.Path):
+    """Save the last/final model checkpoint."""
+    last_filename = f'{str(save_folder)}/model_last.pth.tar'
+    torch.save(state, last_filename)
 
 
 class AverageMeter(object):
@@ -93,18 +105,28 @@ class ProgressMeter(object):
 
 
 # TODO remove dependency to args
-def reload_ckpt(args, model, optimizer, scheduler):
+def reload_ckpt(args, model, optimizer=None, scheduler=None):
     if os.path.isfile(args.resume):
-        print("=> loading checkpoint '{}'".format(args.resume))
+        print(f"=> loading checkpoint '{args.resume}'")
         checkpoint = torch.load(args.resume)
-        args.start_epoch = checkpoint['epoch']
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
-        print("=> loaded checkpoint '{}' (epoch {})"
-              .format(args.resume, checkpoint['epoch']))
+        # restore start epoch if present
+        if 'epoch' in checkpoint:
+            args.start_epoch = checkpoint['epoch']
+        # restore model weights
+        if 'state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['state_dict'])
+        # restore optimizer if provided and present
+        if optimizer is not None and 'optimizer' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+        # restore scheduler if provided and present
+        if scheduler is not None and 'scheduler' in checkpoint:
+            try:
+                scheduler.load_state_dict(checkpoint['scheduler'])
+            except Exception as e:
+                print(f"Warning: could not load scheduler state: {e}")
+        print(f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint.get('epoch', 'N/A')})")
     else:
-        raise ValueError("=> no checkpoint found at '{}'".format(args.resume))
+        raise ValueError(f"=> no checkpoint found at '{args.resume}'")
 
 
 def reload_ckpt_bis(ckpt, model, optimizer=None):
