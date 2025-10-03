@@ -89,18 +89,21 @@ class Brats(Dataset):
 
 def get_datasets(seed, debug, no_seg=False, on="train", full=False,
                  fold_number=0, normalisation="minmax"):
+    # This seed is fixed to ensure the train/test split is always the same.
+    DATASET_SPLIT_SEED = 42
+
     # We're only going to use one folder with all the data, BRATS_TRAIN_FOLDERS
-    # The "on" parameter will be used to select the dataset split
     base_folder = pathlib.Path(get_brats_folder("train")).resolve()
     assert base_folder.exists(), f"folder {base_folder} does not exist"
     patients_dir = sorted([x for x in base_folder.iterdir() if x.is_dir()])
 
     # First, split all patients into a training/validation group and a final test group
-    train_val_patients, test_patients = train_test_split(patients_dir, test_size=0.2, random_state=seed)
+    # This split is ALWAYS the same because of the fixed DATASET_SPLIT_SEED.
+    train_val_patients, test_patients = train_test_split(patients_dir, test_size=0.2, random_state=DATASET_SPLIT_SEED)
 
-    # If "test" or "val" is specified, we return the held-out test set for inference
+    # If "test" or "val" is specified, we return the held-out, constant test set for inference
     if on in ["test", "val"]:
-        print(f"Returning held-out test set with {len(test_patients)} patients.")
+        print(f"Returning held-out test set with {len(test_patients)} patients (fixed split with seed {DATASET_SPLIT_SEED}).")
         return Brats(test_patients, training=False, debug=debug,
                      no_seg=no_seg, normalisation=normalisation)
 
@@ -114,19 +117,20 @@ def get_datasets(seed, debug, no_seg=False, on="train", full=False,
 
     # This is the default "train" case, where we perform k-fold on the train_val_patients
     if no_seg:
-        # This case is unlikely for training, but kept for compatibility
         return Brats(train_val_patients, training=False, debug=debug,
                      no_seg=no_seg, normalisation=normalisation)
 
+    # The K-Fold split uses the --seed from the command line.
+    # This allows for different training runs (e.g. Pipeline A vs B)
     kfold = KFold(5, shuffle=True, random_state=seed)
-    # Apply KFold to the train_val_patients, not the full dataset
     splits = list(kfold.split(train_val_patients))
     train_idx, val_idx = splits[fold_number]
 
     print(f"Total patients in source folder: {len(patients_dir)}")
+    print(f"Train/Val/Test split is fixed with seed {DATASET_SPLIT_SEED}.")
     print(f"Splitting into {len(train_val_patients)} for Train/Val and {len(test_patients)} for Test.")
     print("-" * 20)
-    print(f"Using fold number {fold_number} of {kfold.get_n_splits()}.")
+    print(f"Using fold number {fold_number} of {kfold.get_n_splits()} for training (shuffled with seed {seed}).")
     print(f"Train set size: {len(train_idx)} patients")
     print(f"Validation set size: {len(val_idx)} patients")
 
