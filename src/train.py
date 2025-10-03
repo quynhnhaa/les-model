@@ -10,7 +10,7 @@ import torch
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-from ranger import Ranger
+from pytorch_ranger import Ranger
 from torch.cuda.amp import autocast, GradScaler
 from torch.utils.tensorboard import SummaryWriter
 
