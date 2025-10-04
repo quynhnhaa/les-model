@@ -154,6 +154,17 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     y_slice = slice(crops_idx[1][0].item(), crops_idx[1][1].item())
                     x_slice = slice(crops_idx[2][0].item(), crops_idx[2][1].item())
 
+                    # Workaround for data inconsistency
+                    destination_slice = segs[0, :, z_slice, y_slice, x_slice]
+                    if destination_slice.shape != pre_segs[0].shape:
+                        print(f"\n--- WARNING: Shape mismatch detected for patient {patient_id}! ---")
+                        print(f"  - Source (model output) shape: {pre_segs[0].shape}")
+                        print(f"  - Target (slice) shape:      {destination_slice.shape}")
+                        print(f"  - This indicates a data inconsistency from the dataloader.")
+                        print(f"  - Resizing model output to fit. This may slightly affect segmentation quality for this patient.")
+                        import torch.nn.functional as F
+                        pre_segs = F.interpolate(pre_segs, size=destination_slice.shape[1:], mode='trilinear', align_corners=False)
+
                     segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
 
