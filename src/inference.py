@@ -130,6 +130,14 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                 inputs = inputs_zscore.cuda()
                 pads = pads_zscore
                 crops_idx = crops_idx_zscore
+
+            # --- START DEBUGGING BLOCK ---
+            print("--- DEBUGGING crops_idx ---")
+            print(f"Type of crops_idx: {type(crops_idx)}")
+            print(f"Content of crops_idx: {crops_idx}")
+            import sys; sys.exit("Exiting after debug print.")
+            # --- END DEBUGGING BLOCK ---
+
             model.cuda()  # go to gpu
             with autocast():
                 with torch.no_grad():
