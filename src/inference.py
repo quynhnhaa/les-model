@@ -177,12 +177,25 @@ def generate_segmentations(data_loaders, models, normalisations, args):
         et = segs[0]
         net = np.logical_and(segs[1], np.logical_not(et))
         ed = np.logical_and(segs[2], np.logical_not(segs[1]))
-        labelmap = np.zeros(segs[0].shape)
-        labelmap[et] = 4
-        labelmap[net] = 1
-        labelmap[ed] = 2
-        labelmap = sitk.GetImageFromArray(labelmap)
+        labelmap_np = np.zeros(segs[0].shape, dtype=np.uint8)
+        labelmap_np[et] = 4
+        labelmap_np[net] = 1
+        labelmap_np[ed] = 2
+
+        # The numpy array has shape (D, H, W), e.g. (155, 240, 240)
+        # sitk.GetImageFromArray creates an image of size (W, H, D)
+        labelmap = sitk.GetImageFromArray(labelmap_np)
+
         ref_img = sitk.ReadImage(ref_img_path)
+
+        # The error indicates that for some data, ref_img has a permuted size.
+        # We check for this and transpose our numpy array before creating the
+        # sitk image to match the reference orientation.
+        if labelmap.GetSize() != ref_img.GetSize():
+            # Transpose the numpy array from (D, H, W) to (W, H, D)
+            labelmap_np_transposed = labelmap_np.transpose(2, 1, 0)
+            labelmap = sitk.GetImageFromArray(labelmap_np_transposed)
+
         labelmap.CopyInformation(ref_img)
         print(f"Writing {str(args.pred_folder)}/{patient_id}.nii.gz")
         sitk.WriteImage(labelmap, f"{str(args.pred_folder)}/{patient_id}.nii.gz")
