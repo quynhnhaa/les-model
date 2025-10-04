@@ -131,9 +131,23 @@ def compute_dice_on_test(args):
     for batch in loader:
         patient_id = batch["patient_id"][0]
         target = batch["label"].float()  # shape: [1, 3, D, H, W]
+        crop_indexes = batch["crop_indexes"]
 
         pred_a = load_label_map(patient_id, preds_dir_a) if preds_dir_a else None
         pred_b = load_label_map(patient_id, preds_dir_b) if preds_dir_b else None
+
+        # Crop the loaded predictions to match the target label's crop
+        if pred_a is not None:
+            z_slice = slice(crop_indexes[0][0].item(), crop_indexes[0][1].item())
+            y_slice = slice(crop_indexes[1][0].item(), crop_indexes[1][1].item())
+            x_slice = slice(crop_indexes[2][0].item(), crop_indexes[2][1].item())
+            pred_a = pred_a[z_slice, y_slice, x_slice]
+        
+        if pred_b is not None:
+            z_slice = slice(crop_indexes[0][0].item(), crop_indexes[0][1].item())
+            y_slice = slice(crop_indexes[1][0].item(), crop_indexes[1][1].item())
+            x_slice = slice(crop_indexes[2][0].item(), crop_indexes[2][1].item())
+            pred_b = pred_b[z_slice, y_slice, x_slice]
 
         combined_labelmap = combine_predictions(pred_a, pred_b, args.strategy)
 
