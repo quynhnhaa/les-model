@@ -158,10 +158,14 @@ def compute_dice_on_test(args):
         pred_channels = labelmap_to_channels(combined_labelmap)
         pred_tensor = torch.from_numpy(pred_channels).unsqueeze(0).float()
 
+        # Move prediction to the same device as the target
+        pred_tensor = pred_tensor.to(target.device)
+
         with torch.no_grad():
             dice_scores = criterion.metric(pred_tensor, target)
-            dice_scores_for_patient = dice_scores[0]
-            dice_scores = torch.stack(dice_scores_for_patient).cpu().numpy()
+            # dice_scores is a list of tensors, move them to CPU before stacking
+            dice_scores_for_patient = [d.cpu() for d in dice_scores[0]]
+            dice_scores = torch.stack(dice_scores_for_patient).numpy()
 
         dices.append(dice_scores)
         per_patient_results[patient_id] = dice_scores
