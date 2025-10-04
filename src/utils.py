@@ -133,17 +133,33 @@ def reload_ckpt_bis(ckpt, model, optimizer=None):
     if os.path.isfile(ckpt):
         print(f"=> loading checkpoint {ckpt}")
         try:
-            checkpoint = torch.load(ckpt)
-            start_epoch = checkpoint['epoch']
-            model.load_state_dict(checkpoint['state_dict'])
-            if optimizer:
+            checkpoint = torch.load(ckpt, map_location='cpu')
+            # get rid of 'module.' prefix from state_dict keys
+            state_dict = checkpoint['state_dict']
+            from collections import OrderedDict
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:] if k.startswith('module.') else k # remove `module.`
+                new_state_dict[name] = v
+            model.load_state_dict(new_state_dict)
+            start_epoch = checkpoint.get('epoch', 0) # Use .get for safety
+            if optimizer and 'optimizer' in checkpoint:
                 optimizer.load_state_dict(checkpoint['optimizer'])
             print(f"=> loaded checkpoint '{ckpt}' (epoch {start_epoch})")
             return start_epoch
-        except RuntimeError:
-            # TO account for checkpoint from Alex nets
-            print("Loading model Alex style")
-            model.load_state_dict(torch.load(ckpt, map_location='cpu'))
+        except (RuntimeError, KeyError):
+            # TO account for checkpoint from Alex nets or other issues
+            print("Loading model Alex style or handling other loading errors")
+            # Create a new state_dict without the 'module.' prefix
+            state_dict = torch.load(ckpt, map_location='cpu')
+            if 'state_dict' in state_dict:
+                state_dict = state_dict['state_dict']
+            from collections import OrderedDict
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:] if k.startswith('module.') else k
+                new_state_dict[name] = v
+            model.load_state_dict(new_state_dict)
     else:
         raise ValueError(f"=> no checkpoint found at '{ckpt}'")
 
