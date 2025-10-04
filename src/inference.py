@@ -148,10 +148,11 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
                     print("pre_segs size", pre_segs.shape)
                     segs = torch.zeros((1, 3, 155, 240, 240))
-                    # crops_idx is a tensor of shape (b, 3, 2), for b=1 it's (1, 3, 2)
-                    z_slice = slice(crops_idx[0, 0, 0], crops_idx[0, 0, 1])
-                    y_slice = slice(crops_idx[0, 1, 0], crops_idx[0, 1, 1])
-                    x_slice = slice(crops_idx[0, 2, 0], crops_idx[0, 2, 1])
+                    # crops_idx is a list like [((zmin, zmax), (ymin, ymax), (xmin, xmax))] for batch_size=1
+                    patient_crop_indices = crops_idx[0]
+                    z_slice = slice(patient_crop_indices[0][0], patient_crop_indices[0][1])
+                    y_slice = slice(patient_crop_indices[1][0], patient_crop_indices[1][1])
+                    x_slice = slice(patient_crop_indices[2][0], patient_crop_indices[2][1])
                     segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
 
