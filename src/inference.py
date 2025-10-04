@@ -106,8 +106,21 @@ def main(args):
     generate_segmentations((loader_minmax, loader_zscore), models_list, normalisations_list, args)
 
 
+def center_crop_to_size(tensor, target_size):
+    c, z, y, x = tensor.shape[1:]
+    start_z = (z - target_size) // 2 if z > target_size else 0
+    start_y = (y - target_size) // 2 if y > target_size else 0
+    start_x = (x - target_size) // 2 if x > target_size else 0
+    end_z = start_z + min(z, target_size)
+    end_y = start_y + min(y, target_size)
+    end_x = start_x + min(x, target_size)
+    tensor = tensor[:, :, start_z:end_z, start_y:end_y, start_x:end_x]
+    return tensor, (start_z, start_y, start_x)
+
+
 def generate_segmentations(data_loaders, models, normalisations, args):
     # TODO: try reuse the function used for train...
+    target_size = 128
     for i, (batch_minmax, batch_zscore) in enumerate(zip(data_loaders[0], data_loaders[1])):
         patient_id = batch_minmax["patient_id"][0]
         ref_img_path = batch_minmax["seg_path"][0]
@@ -115,6 +128,32 @@ def generate_segmentations(data_loaders, models, normalisations, args):
         crops_idx_zscore = batch_zscore["crop_indexes"]
         inputs_minmax = batch_minmax["image"]
         inputs_zscore = batch_zscore["image"]
+
+        # Center crop to target_size if larger
+        inputs_minmax, starts_minmax = center_crop_to_size(inputs_minmax, target_size)
+        inputs_zscore, starts_zscore = center_crop_to_size(inputs_zscore, target_size)
+
+        # Update crop_indexes
+        crops_idx_minmax[0][0] += starts_minmax[0]
+        crops_idx_minmax[1][0] += starts_minmax[1]
+        crops_idx_minmax[2][0] += starts_minmax[2]
+        if inputs_minmax.shape[2] == target_size:
+            crops_idx_minmax[0][1] = crops_idx_minmax[0][0] + target_size
+        if inputs_minmax.shape[3] == target_size:
+            crops_idx_minmax[1][1] = crops_idx_minmax[1][0] + target_size
+        if inputs_minmax.shape[4] == target_size:
+            crops_idx_minmax[2][1] = crops_idx_minmax[2][0] + target_size
+
+        crops_idx_zscore[0][0] += starts_zscore[0]
+        crops_idx_zscore[1][0] += starts_zscore[1]
+        crops_idx_zscore[2][0] += starts_zscore[2]
+        if inputs_zscore.shape[2] == target_size:
+            crops_idx_zscore[0][1] = crops_idx_zscore[0][0] + target_size
+        if inputs_zscore.shape[3] == target_size:
+            crops_idx_zscore[1][1] = crops_idx_zscore[1][0] + target_size
+        if inputs_zscore.shape[4] == target_size:
+            crops_idx_zscore[2][1] = crops_idx_zscore[2][0] + target_size
+
         inputs_minmax, pads_minmax = pad_batch1_to_compatible_size(inputs_minmax)
         inputs_zscore, pads_zscore = pad_batch1_to_compatible_size(inputs_zscore)
         model_preds = []
@@ -154,17 +193,6 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     y_slice = slice(crops_idx[1][0].item(), crops_idx[1][1].item())
                     x_slice = slice(crops_idx[2][0].item(), crops_idx[2][1].item())
 
-                    # Workaround for data inconsistency
-                    destination_slice = segs[0, :, z_slice, y_slice, x_slice]
-                    if destination_slice.shape != pre_segs[0].shape:
-                        print(f"\n--- WARNING: Shape mismatch detected for patient {patient_id}! ---")
-                        print(f"  - Source (model output) shape: {pre_segs[0].shape}")
-                        print(f"  - Target (slice) shape:      {destination_slice.shape}")
-                        print(f"  - This indicates a data inconsistency from the dataloader.")
-                        print(f"  - Resizing model output to fit. This may slightly affect segmentation quality for this patient.")
-                        import torch.nn.functional as F
-                        pre_segs = F.interpolate(pre_segs, size=destination_slice.shape[1:], mode='trilinear', align_corners=False)
-
                     segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
 
@@ -193,7 +221,7 @@ def generate_segmentations(data_loaders, models, normalisations, args):
         # sitk image to match the reference orientation.
         if labelmap.GetSize() != ref_img.GetSize():
             # Transpose the numpy array from (D, H, W) to (W, H, D)
-            labelmap_np_transposed = labelmap_np.transpose(1, 2, 0)
+            labelmap_np_transposed = labelmap_np.transpose(2, 1, 0)
             labelmap = sitk.GetImageFromArray(labelmap_np_transposed)
 
         labelmap.CopyInformation(ref_img)
