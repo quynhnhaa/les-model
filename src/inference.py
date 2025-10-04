@@ -148,7 +148,11 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
                     print("pre_segs size", pre_segs.shape)
                     segs = torch.zeros((1, 3, 155, 240, 240))
-                    segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
+                    # crops_idx is a tensor of shape (b, 3, 2), for b=1 it's (1, 3, 2)
+                    z_slice = slice(crops_idx[0, 0, 0], crops_idx[0, 0, 1])
+                    y_slice = slice(crops_idx[0, 1, 0], crops_idx[0, 1, 1])
+                    x_slice = slice(crops_idx[0, 2, 0], crops_idx[0, 2, 1])
+                    segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
 
                     model_preds.append(segs)
