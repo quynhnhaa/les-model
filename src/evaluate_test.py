@@ -160,7 +160,8 @@ def compute_dice_on_test(args):
 
         with torch.no_grad():
             dice_scores = criterion.metric(pred_tensor, target)
-            dice_scores = dice_scores.squeeze(0).cpu().numpy()  # [ET, TC, WT]
+            dice_scores_for_patient = dice_scores[0]
+            dice_scores = torch.stack(dice_scores_for_patient).cpu().numpy()
 
         dices.append(dice_scores)
         per_patient_results[patient_id] = dice_scores
