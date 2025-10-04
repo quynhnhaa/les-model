@@ -193,7 +193,7 @@ def generate_segmentations(data_loaders, models, normalisations, args):
         # sitk image to match the reference orientation.
         if labelmap.GetSize() != ref_img.GetSize():
             # Transpose the numpy array from (D, H, W) to (W, H, D)
-            labelmap_np_transposed = labelmap_np.transpose(2, 0, 1)
+            labelmap_np_transposed = labelmap_np.transpose(1, 2, 0)
             labelmap = sitk.GetImageFromArray(labelmap_np_transposed)
 
         labelmap.CopyInformation(ref_img)
