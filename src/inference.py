@@ -188,9 +188,9 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     segs = torch.zeros((1, 3, 155, 240, 240))
 
                     # Correct indexing based on debug output: crops_idx is a list of lists of tensors
-                    z_slice = slice(crops_idx[0][0].item(), crops_idx[0][1].item())
-                    y_slice = slice(crops_idx[1][0].item(), crops_idx[1][1].item())
-                    x_slice = slice(crops_idx[2][0].item(), crops_idx[2][1].item())
+                    z_slice = slice(crops_idx[0][0].item(), crops_idx[0][0].item() + pre_segs.size(2))
+                    y_slice = slice(crops_idx[1][0].item(), crops_idx[1][0].item() + pre_segs.size(3))
+                    x_slice = slice(crops_idx[2][0].item(), crops_idx[2][0].item() + pre_segs.size(4))
 
                     segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
