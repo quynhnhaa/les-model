@@ -174,7 +174,6 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                 with torch.no_grad():
                     if args.tta:
                         pre_segs = apply_simple_tta(model, inputs, True)
-                        model_preds.append(pre_segs)
                     else:
                         if model.deep_supervision:
                             pre_segs, _ = model(inputs)
