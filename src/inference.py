@@ -11,7 +11,8 @@ import torch
 import torch.optim
 import torch.utils.data
 import yaml
-from torch.cuda.amp import autocast
+import torch.nn.functional as F
+from torch.amp import autocast
 
 from src import models
 from src.dataset import get_datasets
@@ -71,7 +72,6 @@ def main(args):
         args.pred_folder.mkdir(exist_ok=True)
 
     # Create model
-
     models_list = []
     normalisations_list = []
     for model_args in args_list:
@@ -85,6 +85,7 @@ def main(args):
         print(f"Creating {model_args.arch}")
 
         reload_ckpt_bis(str(model_args.ckpt), model)
+        model.eval()  # ensure eval mode for inference
         models_list.append(model)
         normalisations_list.append(model_args.normalisation)
         print("reload best weights")
@@ -107,7 +108,8 @@ def main(args):
 
 
 def center_crop_to_size(tensor, target_size):
-    c, z, y, x = tensor.shape[1:]
+    # tensor: (N, C, Z, Y, X)
+    _, _, z, y, x = tensor.shape
     start_z = (z - target_size) // 2 if z > target_size else 0
     start_y = (y - target_size) // 2 if y > target_size else 0
     start_x = (x - target_size) // 2 if x > target_size else 0
@@ -118,114 +120,149 @@ def center_crop_to_size(tensor, target_size):
     return tensor, (start_z, start_y, start_x)
 
 
-def generate_segmentations(data_loaders, models, normalisations, args):
-    # TODO: try reuse the function used for train...
+def _get_crop_start(crops_idx, dim_idx):
+    """
+    Lấy start index theo chiều dim_idx từ crop_indexes.
+    Hỗ trợ dạng:
+      - list/tuple: crops_idx[dim_idx][0] là tensor hoặc số
+      - tensor (3,2) hoặc (1,3,2)
+    """
+    if torch.is_tensor(crops_idx):
+        t = crops_idx
+        if t.dim() == 3 and t.size(0) == 1:
+            t = t[0]
+        # expect shape (3,2): index 0 is start
+        return int(t[dim_idx, 0].item())
+    # list/tuple
+    v = crops_idx[dim_idx][0]
+    return int(v.item()) if torch.is_tensor(v) else int(v)
+
+
+def generate_segmentations(data_loaders, models_list, normalisations, args):
     target_size = 128
+    canvas_dhw = (155, 240, 240)  # (Z, Y, X) of BRATS full volume
+
     for i, (batch_minmax, batch_zscore) in enumerate(zip(data_loaders[0], data_loaders[1])):
         patient_id = batch_minmax["patient_id"][0]
         ref_img_path = batch_minmax["seg_path"][0]
+
         crops_idx_minmax = batch_minmax["crop_indexes"]
         crops_idx_zscore = batch_zscore["crop_indexes"]
         inputs_minmax = batch_minmax["image"]
         inputs_zscore = batch_zscore["image"]
 
-        # Center crop to target_size if larger
+        # Center crop nhưng KHÔNG sửa crop_indexes in-place
         inputs_minmax, starts_minmax = center_crop_to_size(inputs_minmax, target_size)
         inputs_zscore, starts_zscore = center_crop_to_size(inputs_zscore, target_size)
 
-        # Update crop_indexes
-        crops_idx_minmax[0][0] += starts_minmax[0]
-        crops_idx_minmax[1][0] += starts_minmax[1]
-        crops_idx_minmax[2][0] += starts_minmax[2]
-        if inputs_minmax.shape[2] == target_size:
-            crops_idx_minmax[0][1] = crops_idx_minmax[0][0] + target_size
-        if inputs_minmax.shape[3] == target_size:
-            crops_idx_minmax[1][1] = crops_idx_minmax[1][0] + target_size
-        if inputs_minmax.shape[4] == target_size:
-            crops_idx_minmax[2][1] = crops_idx_minmax[2][0] + target_size
-
-        crops_idx_zscore[0][0] += starts_zscore[0]
-        crops_idx_zscore[1][0] += starts_zscore[1]
-        crops_idx_zscore[2][0] += starts_zscore[2]
-        if inputs_zscore.shape[2] == target_size:
-            crops_idx_zscore[0][1] = crops_idx_zscore[0][0] + target_size
-        if inputs_zscore.shape[3] == target_size:
-            crops_idx_zscore[1][1] = crops_idx_zscore[1][0] + target_size
-        if inputs_zscore.shape[4] == target_size:
-            crops_idx_zscore[2][1] = crops_idx_zscore[2][0] + target_size
-
         inputs_minmax, pads_minmax = pad_batch1_to_compatible_size(inputs_minmax)
         inputs_zscore, pads_zscore = pad_batch1_to_compatible_size(inputs_zscore)
+
         model_preds = []
-        last_norm = None
-        for model, normalisation in zip(models, normalisations):
-            if normalisation == last_norm:
-                pass
-            elif normalisation == "minmax":
-                inputs = inputs_minmax.cuda()
+
+        for model, normalisation in zip(models_list, normalisations):
+            if normalisation == "minmax":
+                inputs = inputs_minmax.cuda(non_blocking=True)
                 pads = pads_minmax
                 crops_idx = crops_idx_minmax
+                starts = starts_minmax
             elif normalisation == "zscore":
-                inputs = inputs_zscore.cuda()
+                inputs = inputs_zscore.cuda(non_blocking=True)
                 pads = pads_zscore
                 crops_idx = crops_idx_zscore
-            model.cuda()  # go to gpu
-            with autocast():
+                starts = starts_zscore
+            else:
+                raise ValueError(f"Unknown normalisation: {normalisation}")
+
+            # Tính start index mới: start_gốc + offset center-crop
+            z0 = _get_crop_start(crops_idx, 0) + int(starts[0])
+            y0 = _get_crop_start(crops_idx, 1) + int(starts[1])
+            x0 = _get_crop_start(crops_idx, 2) + int(starts[2])
+
+            model = model.cuda()
+            with autocast("cuda"):
                 with torch.no_grad():
                     if args.tta:
-                        pre_segs = apply_simple_tta(model, inputs, True)
+                        pre_segs = apply_simple_tta(model, inputs, average=True)
+                        # Đảm bảo là prob
+                        if pre_segs.min() < 0 or pre_segs.max() > 1:
+                            pre_segs = torch.sigmoid(pre_segs)
                     else:
-                        if model.deep_supervision:
+                        if getattr(model, "deep_supervision", False):
                             pre_segs, _ = model(inputs)
                         else:
                             pre_segs = model(inputs)
-                        pre_segs = pre_segs.sigmoid_().cpu()
-                    # remove pads
-                    maxz, maxy, maxx = pre_segs.size(2) - pads[0], pre_segs.size(3) - pads[1], pre_segs.size(4) - \
-                                       pads[2]
+                        pre_segs = torch.sigmoid(pre_segs)
+
+                    # Bỏ pads
+                    maxz = pre_segs.size(2) - pads[0]
+                    maxy = pre_segs.size(3) - pads[1]
+                    maxx = pre_segs.size(4) - pads[2]
                     pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
-                    print("pre_segs size", pre_segs.shape)
-                    segs = torch.zeros((1, 3, 155, 240, 240))
 
-                    # Correct indexing based on debug output: crops_idx is a list of lists of tensors
-                    z_slice = slice(crops_idx[0][0].item(), crops_idx[0][0].item() + pre_segs.size(2))
-                    y_slice = slice(crops_idx[1][0].item(), crops_idx[1][0].item() + pre_segs.size(3))
-                    x_slice = slice(crops_idx[2][0].item(), crops_idx[2][0].item() + pre_segs.size(4))
+            # Canvas (1, 3, 155, 240, 240)
+            segs = torch.zeros((1, 3, *canvas_dhw), dtype=pre_segs.dtype)
 
-                    segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
-                    print("segs size", segs.shape)
+            # Kích thước nguồn
+            sz, sy, sx = pre_segs.size(2), pre_segs.size(3), pre_segs.size(4)
 
-                    model_preds.append(segs)
-            model.cpu()  # free for the next one
-        pre_segs = torch.stack(model_preds).mean(dim=0)
+            # Clamp đích theo canvas
+            z1 = min(z0 + sz, canvas_dhw[0])
+            y1 = min(y0 + sy, canvas_dhw[1])
+            x1 = min(x0 + sx, canvas_dhw[2])
 
-        segs = pre_segs[0].numpy() > 0.5
+            # Số voxel thực sự chèn được
+            ins_z = max(0, z1 - z0)
+            ins_y = max(0, y1 - y0)
+            ins_x = max(0, x1 - x0)
 
-        et = segs[0]
-        net = np.logical_and(segs[1], np.logical_not(et))
-        ed = np.logical_and(segs[2], np.logical_not(segs[1]))
-        labelmap_np = np.zeros(segs[0].shape, dtype=np.uint8)
+            if ins_z == 0 or ins_y == 0 or ins_x == 0:
+                # Nếu có gì đó bất thường khiến ROI nằm ngoài canvas, bỏ qua model này
+                print(f"Warning: empty insertion for patient {patient_id} (z0,y0,x0)=({z0},{y0},{x0}), size=({sz},{sy},{sx})")
+                model = model.cpu()
+                continue
+
+            # Cắt nguồn tương ứng nếu cần
+            src_z1 = min(ins_z, sz)
+            src_y1 = min(ins_y, sy)
+            src_x1 = min(ins_x, sx)
+
+            # Gán
+            segs[0, :, z0:z0+ins_z, y0:y0+ins_y, x0:x0+ins_x] = pre_segs[0, :, 0:src_z1, 0:src_y1, 0:src_x1]
+            model = model.cpu()
+            model_preds.append(segs)
+
+        # Ensemble theo model
+        if len(model_preds) == 0:
+            # Không có dự đoán hợp lệ
+            print(f"Warning: no predictions for patient {patient_id}, writing empty mask.")
+            pre_segs_mean = torch.zeros((1, 3, *canvas_dhw))
+        else:
+            pre_segs_mean = torch.stack(model_preds, dim=0).mean(dim=0)
+
+        segs_bin = pre_segs_mean[0].numpy() > 0.5  # (3, Z, Y, X)
+
+        et = segs_bin[0]
+        net = np.logical_and(segs_bin[1], np.logical_not(et))
+        ed = np.logical_and(segs_bin[2], np.logical_not(segs_bin[1]))
+        labelmap_np = np.zeros(segs_bin[0].shape, dtype=np.uint8)
         labelmap_np[et] = 4
         labelmap_np[net] = 1
         labelmap_np[ed] = 2
 
-        # The numpy array has shape (D, H, W), e.g. (155, 240, 240)
-        # sitk.GetImageFromArray creates an image of size (W, H, D)
+        # SITK: array (D,H,W) -> image (W,H,D)
         labelmap = sitk.GetImageFromArray(labelmap_np)
-
         ref_img = sitk.ReadImage(ref_img_path)
 
-        # The error indicates that for some data, ref_img has a permuted size.
-        # We check for this and transpose our numpy array before creating the
-        # sitk image to match the reference orientation.
+        # Nếu size không khớp (do hướng trục khác), thử transpose
         if labelmap.GetSize() != ref_img.GetSize():
-            # Transpose the numpy array from (D, H, W) to (W, H, D)
             labelmap_np_transposed = labelmap_np.transpose(2, 1, 0)
             labelmap = sitk.GetImageFromArray(labelmap_np_transposed)
 
         labelmap.CopyInformation(ref_img)
-        print(f"Writing {str(args.pred_folder)}/{patient_id}.nii.gz")
-        sitk.WriteImage(labelmap, f"{str(args.pred_folder)}/{patient_id}.nii.gz")
+        out_path = f"{str(args.pred_folder)}/{patient_id}.nii.gz"
+        print(f"Writing {out_path}")
+        sitk.WriteImage(labelmap, out_path)
 
 
 if __name__ == '__main__':
