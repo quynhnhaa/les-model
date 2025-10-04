@@ -37,7 +37,7 @@ def pad_batch_to_max_shape(batch):
     return batch
 
 
-def pad_batch1_to_compatible_size(batch):
+def pad_batch1_to_compatible_size(batch, target_size=128):
     print(batch.shape)
     shape = batch.shape
     zyx = list(shape[-3:])
@@ -46,6 +46,7 @@ def pad_batch1_to_compatible_size(batch):
         if dim % max_stride != 0:
             # Make it divisible by 16
             zyx[i] = ((dim // max_stride) + 1) * max_stride
+        zyx[i] = max(zyx[i], target_size)
     zmax, ymax, xmax = zyx
     zpad, ypad, xpad = zmax - batch.size(2), ymax - batch.size(3), xmax - batch.size(4)
     assert all(pad >= 0 for pad in (zpad, ypad, xpad)), "Negative padding value error !!"
