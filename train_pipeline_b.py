@@ -289,18 +289,19 @@ def main(args):
                     scheduler.step()
                     print("scheduler stepped!")
 
+            # Save last model checkpoint at the end of each epoch
+            save_checkpoint_last(
+                dict(
+                    epoch=epoch, arch=args.arch,
+                    state_dict=model.state_dict(),
+                    optimizer=optimizer.state_dict()
+                ),
+                save_folder=args.save_folder,
+            )
+
         except KeyboardInterrupt:
             print("Stopping Pipeline B training loop, doing benchmark")
             break
-
-    # Save final model (last)
-    save_checkpoint_last(
-        dict(
-            epoch=args.epochs, arch=args.arch,
-            state_dict=model.state_dict(),
-            optimizer=optimizer.state_dict()
-        ),
-        save_folder=args.save_folder, )
 
     try:
         df_individual_perf = pd.DataFrame.from_records(patients_perf)
