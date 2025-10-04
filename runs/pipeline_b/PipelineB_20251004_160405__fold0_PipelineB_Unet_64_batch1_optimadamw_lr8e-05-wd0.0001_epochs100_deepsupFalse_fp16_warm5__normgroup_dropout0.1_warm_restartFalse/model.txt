@@ -1,0 +1,305 @@
+DataParallel(
+  (module): PipelineB_Unet(
+    (encoder1): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(4, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(32, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 64, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=64, out_features=4, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=4, out_features=64, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (encoder2): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(64, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 64, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(64, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 128, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=128, out_features=8, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=8, out_features=128, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (encoder3): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(128, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 128, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(128, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 256, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=256, out_features=16, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=16, out_features=256, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (encoder4): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(256, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 256, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(256, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 512, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=512, out_features=32, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=32, out_features=512, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (bottom): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(512, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(2, 2, 2), dilation=(2, 2, 2), bias=False)
+          (bn): GroupNorm(16, 512, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(512, 512, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(2, 2, 2), dilation=(2, 2, 2), bias=False)
+          (bn): GroupNorm(16, 512, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=512, out_features=32, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=32, out_features=512, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (bottom_2): Sequential(
+      (0): ConvBnRelu(
+        (conv): Conv3d(1024, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+        (bn): GroupNorm(16, 256, eps=1e-05, affine=True)
+        (relu): ReLU(inplace=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+      )
+      (1): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=256, out_features=16, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=16, out_features=256, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (downsample): MaxPool3d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (decoder3): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(512, 256, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 256, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(256, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 128, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=128, out_features=8, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=8, out_features=128, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (decoder2): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(256, 128, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 128, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(128, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 64, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=64, out_features=4, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=4, out_features=64, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (decoder1): UBlockCbam(
+      (UBlock): UBlock(
+        (ConvBnRelu1): ConvBnRelu(
+          (conv): Conv3d(128, 64, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 64, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (ConvBnRelu2): ConvBnRelu(
+          (conv): Conv3d(64, 32, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1), bias=False)
+          (bn): GroupNorm(16, 32, eps=1e-05, affine=True)
+          (relu): ReLU(inplace=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+      )
+      (CBAM): CBAM(
+        (ChannelGate): ChannelGate(
+          (mlp): Sequential(
+            (0): Flatten()
+            (1): Linear(in_features=32, out_features=2, bias=True)
+            (2): ReLU(inplace=True)
+            (3): Linear(in_features=2, out_features=32, bias=True)
+          )
+        )
+        (SpatialGate): SpatialGate(
+          (compress): ChannelPool()
+          (spatial): BasicConv(
+            (conv): Conv3d(2, 1, kernel_size=(7, 7, 7), stride=(1, 1, 1), padding=(3, 3, 3), bias=False)
+            (bn): GroupNorm(1, 1, eps=1e-05, affine=True)
+            (relu): ReLU(inplace=True)
+          )
+        )
+      )
+    )
+    (upsample): Upsample(scale_factor=2.0, mode='trilinear')
+    (outconv): Conv3d(32, 3, kernel_size=(1, 1, 1), stride=(1, 1, 1))
+  )
+)
