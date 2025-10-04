@@ -148,11 +148,17 @@ def generate_segmentations(data_loaders, models, normalisations, args):
                     pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
                     print("pre_segs size", pre_segs.shape)
                     segs = torch.zeros((1, 3, 155, 240, 240))
-                    # crops_idx is a list like [((zmin, zmax), (ymin, ymax), (xmin, xmax))] for batch_size=1
-                    patient_crop_indices = crops_idx[0]
-                    z_slice = slice(patient_crop_indices[0][0], patient_crop_indices[0][1])
-                    y_slice = slice(patient_crop_indices[1][0], patient_crop_indices[1][1])
-                    x_slice = slice(patient_crop_indices[2][0], patient_crop_indices[2][1])
+                    # From the error messages, we deduce crops_idx is a list containing a tuple of tensors
+                    patient_crop_indices_tuple = crops_idx[0]
+                    z_coords_tensor = patient_crop_indices_tuple[0] # Shape (1, 2)
+                    y_coords_tensor = patient_crop_indices_tuple[1] # Shape (1, 2)
+                    x_coords_tensor = patient_crop_indices_tuple[2] # Shape (1, 2)
+
+                    # Extract integer values for slicing
+                    z_slice = slice(z_coords_tensor[0, 0].item(), z_coords_tensor[0, 1].item())
+                    y_slice = slice(y_coords_tensor[0, 0].item(), y_coords_tensor[0, 1].item())
+                    x_slice = slice(x_coords_tensor[0, 0].item(), x_coords_tensor[0, 1].item())
+                    
                     segs[0, :, z_slice, y_slice, x_slice] = pre_segs[0]
                     print("segs size", segs.shape)
 
