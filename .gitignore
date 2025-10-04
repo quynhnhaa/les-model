@@ -1,4 +1,5 @@
-runs/
+*.pth.tar
+*.pth
 .DS_Store
 *.pyc
 __pycache__/
