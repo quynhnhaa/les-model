@@ -276,7 +276,7 @@ def generate_segmentations(data_loader, model, writer, args):
         inputs = inputs.cuda()
         with autocast():
             with torch.no_grad():
-                if model.deep_supervision:
+                if model.module.deep_supervision:
                     pre_segs, _ = model(inputs)
                 else:
                     pre_segs = model(inputs)
