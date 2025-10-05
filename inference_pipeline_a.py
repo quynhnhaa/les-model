@@ -88,7 +88,7 @@ def generate_predictions(model, data_loader, args):
             inputs = inputs.cuda()
 
             # Generate prediction
-            with autocast('cuda'):
+            with autocast(enabled=True):
                 if hasattr(model, 'deep_supervision') and model.deep_supervision:
                     pre_segs, _ = model(inputs)
                 else:
