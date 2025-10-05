@@ -1,0 +1,5 @@
+{
+  "epoch": 65,
+  "val_loss": 0.20695835850754027,
+  "checkpoint": "/kaggle/working/les-model/runs/pipeline_b/PipelineB_20251004_191709__fold0_PipelineB_Unet_64_batch1_optimadamw_lr8e-05-wd0.0001_epochs150_deepsupFalse_fp16_warm5__normgroup_dropout0.1_warm_restartFalse/model_best.pth.tar"
+}

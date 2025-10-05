@@ -3,7 +3,7 @@ from pathlib import Path
 
 # Set the path to the single folder containing all your data.
 # This is the only path you need to modify. For Kaggle, it's as follows:
-BRATS_TRAIN_FOLDERS = "/kaggle/input/data-npy"
+BRATS_TRAIN_FOLDERS = "/kaggle/input/data-npy"  # <-- UPDATE THIS PATH
 
 # The variables below are no longer used by the new data splitting logic.
 BRATS_VAL_FOLDER = ""
