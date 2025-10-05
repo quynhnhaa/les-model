@@ -274,15 +274,19 @@ def compute_metrics_on_test(args):
         pred_tensor = torch.from_numpy(pred_channels).unsqueeze(0).float()
         pred_tensor = pred_tensor.to(target.device)
 
+        # Use target_cropped for metrics calculation to match prediction size
+        target_cropped_tensor = torch.from_numpy(target_cropped).unsqueeze(0).float()
+        target_cropped_tensor = target_cropped_tensor.to(target.device)
+
         with torch.no_grad():
-            dice_scores = criterion.metric(pred_tensor, target)
+            dice_scores = criterion.metric(pred_tensor, target_cropped_tensor)
             dice_scores_for_patient = [d.cpu().numpy() for d in dice_scores[0]]
 
-        # Calculate Hausdorff distances
+        # Calculate Hausdorff distances using cropped target
         hausdorff_scores = []
         for i, region_name in enumerate(['ET', 'TC', 'WT']):
             pred_region = pred_channels[i]
-            target_region = target_full[i]
+            target_region = target_cropped[i]
 
             hd = calculate_hausdorff_distance(pred_region, target_region)
             hausdorff_scores.append(hd)
