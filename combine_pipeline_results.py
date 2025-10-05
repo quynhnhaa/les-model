@@ -85,24 +85,30 @@ def calculate_hausdorff_distance(pred, target):
 
 def evaluate_pipeline_performance(pred_a, pred_b, target, crop_indexes):
     """Evaluate which pipeline performs better for each region."""
-    # Use the same size for all arrays - predictions are already cropped
-    # Convert to channels
-    target_et = target == 4
-    target_tc = np.logical_or(target == 4, target == 1)
-    target_wt = np.logical_or(target_tc, target == 2)
+    # Ensure all arrays have the same shape
+    print(f"Debug: pred_a shape: {pred_a.shape}, pred_b shape: {pred_b.shape}, target shape: {target.shape}")
+
+    # Convert to channels - ensure same shape
+    target_et = (target == 4).astype(np.uint8)
+    target_tc = np.logical_or(target == 4, target == 1).astype(np.uint8)
+    target_wt = np.logical_or(target_tc, target == 2).astype(np.uint8)
+
+    print(f"Debug: target_et shape: {target_et.shape}, target_tc shape: {target_tc.shape}, target_wt shape: {target_wt.shape}")
 
     # Evaluate each pipeline for each region
     regions = {
-        'ET': (pred_a == 4, pred_b == 4, target_et),
-        'TC': (np.logical_or(pred_a == 4, pred_a == 1),
-               np.logical_or(pred_b == 4, pred_b == 1), target_tc),
-        'WT': (np.logical_or(np.logical_or(pred_a == 4, pred_a == 1), pred_a == 2),
-               np.logical_or(np.logical_or(pred_b == 4, pred_b == 1), pred_b == 2), target_wt)
+        'ET': ((pred_a == 4).astype(np.uint8), (pred_b == 4).astype(np.uint8), target_et),
+        'TC': (np.logical_or(pred_a == 4, pred_a == 1).astype(np.uint8),
+               np.logical_or(pred_b == 4, pred_b == 1).astype(np.uint8), target_tc),
+        'WT': (np.logical_or(np.logical_or(pred_a == 4, pred_a == 1), pred_a == 2).astype(np.uint8),
+               np.logical_or(np.logical_or(pred_b == 4, pred_b == 1), pred_b == 2).astype(np.uint8), target_wt)
     }
 
     pipeline_scores = {'A': {}, 'B': {}}
 
     for region_name, (pred_a_region, pred_b_region, target_region) in regions.items():
+        print(f"Debug {region_name}: pred_a_region shape: {pred_a_region.shape}, target_region shape: {target_region.shape}")
+
         dice_a = calculate_dice_coefficient(pred_a_region, target_region)
         dice_b = calculate_dice_coefficient(pred_b_region, target_region)
 
