@@ -85,23 +85,30 @@ def calculate_hausdorff_distance(pred, target):
 
 def evaluate_pipeline_performance(pred_a, pred_b, target, crop_indexes):
     """Evaluate which pipeline performs better for each region."""
-    # Ensure all arrays have the same shape
+    # Debug shapes
     print(f"Debug: pred_a shape: {pred_a.shape}, pred_b shape: {pred_b.shape}, target shape: {target.shape}")
 
-    # Convert to channels - ensure same shape
-    target_et = (target == 4).astype(np.uint8)
-    target_tc = np.logical_or(target == 4, target == 1).astype(np.uint8)
-    target_wt = np.logical_or(target_tc, target == 2).astype(np.uint8)
+    # Target is in channels-first format (3, D, H, W)
+    # Extract each channel
+    target_et = target[0]  # ET channel
+    target_tc = target[1]  # TC channel
+    target_wt = target[2]  # WT channel
 
     print(f"Debug: target_et shape: {target_et.shape}, target_tc shape: {target_tc.shape}, target_wt shape: {target_wt.shape}")
 
+    # Ensure predictions and targets have compatible shapes for broadcasting
+    # All should be 3D arrays
+    assert pred_a.ndim == 3, f"pred_a should be 3D, got {pred_a.ndim}D"
+    assert pred_b.ndim == 3, f"pred_b should be 3D, got {pred_b.ndim}D"
+    assert target_et.ndim == 3, f"target_et should be 3D, got {target_et.ndim}D"
+
     # Evaluate each pipeline for each region
     regions = {
-        'ET': ((pred_a == 4).astype(np.uint8), (pred_b == 4).astype(np.uint8), target_et),
+        'ET': ((pred_a == 4).astype(np.uint8), (pred_b == 4).astype(np.uint8), target_et.astype(np.uint8)),
         'TC': (np.logical_or(pred_a == 4, pred_a == 1).astype(np.uint8),
-               np.logical_or(pred_b == 4, pred_b == 1).astype(np.uint8), target_tc),
+               np.logical_or(pred_b == 4, pred_b == 1).astype(np.uint8), target_tc.astype(np.uint8)),
         'WT': (np.logical_or(np.logical_or(pred_a == 4, pred_a == 1), pred_a == 2).astype(np.uint8),
-               np.logical_or(np.logical_or(pred_b == 4, pred_b == 1), pred_b == 2).astype(np.uint8), target_wt)
+               np.logical_or(np.logical_or(pred_b == 4, pred_b == 1), pred_b == 2).astype(np.uint8), target_wt.astype(np.uint8))
     }
 
     pipeline_scores = {'A': {}, 'B': {}}
