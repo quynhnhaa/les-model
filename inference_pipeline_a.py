@@ -88,7 +88,7 @@ def generate_predictions(model, data_loader, args):
             inputs = inputs.cuda()
 
             # Generate prediction
-            with autocast():
+            with autocast('cuda'):
                 if hasattr(model, 'deep_supervision') and model.deep_supervision:
                     pre_segs, _ = model(inputs)
                 else:
@@ -101,12 +101,12 @@ def generate_predictions(model, data_loader, args):
             maxx = pre_segs.size(4) - pads[2]
             pre_segs = pre_segs[:, :, 0:maxz, 0:maxy, 0:maxx].cpu()
 
-            # Create full-size segmentation canvas
-            canvas_dhw = (155, 240, 240)  # Standard BraTS volume size
-            segs = torch.zeros((1, 3, *canvas_dhw))
+            # Create segmentation canvas with appropriate size
+            # Use the actual prediction size after removing padding
+            segs = torch.zeros((1, 3, *pre_segs.shape[2:]))
 
-            # Place prediction in correct location
-            segs[0, :, slice(*crops_idx[0]), slice(*crops_idx[1]), slice(*crops_idx[2])] = pre_segs[0]
+            # Place prediction (no need for crop_idx since we're using the processed size)
+            segs[0] = pre_segs[0]
 
             # Convert to binary segmentation
             segs_binary = segs[0].numpy() > args.threshold
@@ -142,15 +142,22 @@ def calculate_metrics_for_predictions(predictions, patient_info, args):
     for i, (pred, info) in enumerate(zip(predictions, patient_info)):
         patient_id = info['patient_id']
         ref_path = info['ref_path']
+        crops_idx = info['crops_idx']
 
         # Load ground truth
         ref_img = sitk.ReadImage(ref_path)
         ref_seg = sitk.GetArrayFromImage(ref_img)
 
+        # Crop ground truth to match prediction size
+        z_slice = slice(crops_idx[0][0], crops_idx[0][1])
+        y_slice = slice(crops_idx[1][0], crops_idx[1][1])
+        x_slice = slice(crops_idx[2][0], crops_idx[2][1])
+        ref_seg_cropped = ref_seg[z_slice, y_slice, x_slice]
+
         # Convert ground truth to channels format (ET, TC, WT)
-        refmap_et = ref_seg == 4
-        refmap_tc = np.logical_or(refmap_et, ref_seg == 1)
-        refmap_wt = np.logical_or(refmap_tc, ref_seg == 2)
+        refmap_et = ref_seg_cropped == 4
+        refmap_tc = np.logical_or(refmap_et, ref_seg_cropped == 1)
+        refmap_wt = np.logical_or(refmap_tc, ref_seg_cropped == 2)
         refmap = np.stack([refmap_et, refmap_tc, refmap_wt])
 
         # Convert prediction to channels format
