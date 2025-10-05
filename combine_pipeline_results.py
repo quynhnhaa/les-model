@@ -85,16 +85,11 @@ def calculate_hausdorff_distance(pred, target):
 
 def evaluate_pipeline_performance(pred_a, pred_b, target, crop_indexes):
     """Evaluate which pipeline performs better for each region."""
-    # Crop target to match prediction size
-    z_slice = slice(crop_indexes[0][0], crop_indexes[0][1])
-    y_slice = slice(crop_indexes[1][0], crop_indexes[1][1])
-    x_slice = slice(crop_indexes[2][0], crop_indexes[2][1])
-    target_cropped = target[z_slice, y_slice, x_slice]
-
+    # Use the same size for all arrays - predictions are already cropped
     # Convert to channels
-    target_et = target_cropped == 4
-    target_tc = np.logical_or(target_cropped == 4, target_cropped == 1)
-    target_wt = np.logical_or(target_tc, target_cropped == 2)
+    target_et = target == 4
+    target_tc = np.logical_or(target == 4, target == 1)
+    target_wt = np.logical_or(target_tc, target == 2)
 
     # Evaluate each pipeline for each region
     regions = {
