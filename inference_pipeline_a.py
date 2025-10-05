@@ -75,6 +75,10 @@ def generate_predictions(model, data_loader, args):
     predictions = []
     patient_info = []
 
+    # Create predictions directory
+    pred_dir = pathlib.Path(args.output_dir) / "predictions"
+    pred_dir.mkdir(parents=True, exist_ok=True)
+
     print("Generating predictions...")
     with torch.no_grad():
         for i, batch in enumerate(data_loader):
@@ -120,6 +124,14 @@ def generate_predictions(model, data_loader, args):
             labelmap[et] = 4  # Enhancing tumor
             labelmap[net] = 1  # Necrotic core
             labelmap[ed] = 2   # Edema
+
+            # Save prediction as .nii.gz file
+            labelmap_img = sitk.GetImageFromArray(labelmap)
+            ref_img = sitk.ReadImage(ref_path)
+            labelmap_img.CopyInformation(ref_img)
+            output_path = pred_dir / f"{patient_id}.nii.gz"
+            sitk.WriteImage(labelmap_img, str(output_path))
+            print(f"Saved prediction: {output_path}")
 
             predictions.append(labelmap)
             patient_info.append({

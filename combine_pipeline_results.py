@@ -186,13 +186,14 @@ def compute_metrics_on_test(args):
     all_metrics = []
     per_patient_results = {}
 
-    preds_dir_a = Path(args.pipeline_a_dir).resolve() if args.pipeline_a_dir else None
-    preds_dir_b = Path(args.pipeline_b_dir).resolve() if args.pipeline_b_dir else None
+    # Use predictions subdirectory within the output directories
+    preds_dir_a = Path(args.pipeline_a_dir) / "predictions" if args.pipeline_a_dir else None
+    preds_dir_b = Path(args.pipeline_b_dir) / "predictions" if args.pipeline_b_dir else None
 
     if preds_dir_a and not preds_dir_a.exists():
-        raise FileNotFoundError(f"Pipeline A directory not found: {preds_dir_a}")
+        raise FileNotFoundError(f"Pipeline A predictions directory not found: {preds_dir_a}")
     if preds_dir_b and not preds_dir_b.exists():
-        raise FileNotFoundError(f"Pipeline B directory not found: {preds_dir_b}")
+        raise FileNotFoundError(f"Pipeline B predictions directory not found: {preds_dir_b}")
 
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
