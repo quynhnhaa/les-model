@@ -321,15 +321,15 @@ def save_results(all_metrics, args):
     print(f"Total patients: {len(df)}")
 
     print("\nMean Dice Scores:")
-    print(f"  ET: {mean_dice_et".4f"}")
-    print(f"  TC: {mean_dice_tc".4f"}")
-    print(f"  WT: {mean_dice_wt".4f"}")
-    print(f"  Mean: {np.mean([mean_dice_et, mean_dice_tc, mean_dice_wt])".4f"}")
+    print(f"  ET: {mean_dice_et:.4f}")
+    print(f"  TC: {mean_dice_tc:.4f}")
+    print(f"  WT: {mean_dice_wt:.4f}")
+    print(f"  Mean: {np.mean([mean_dice_et, mean_dice_tc, mean_dice_wt]):.4f}")
 
     print("\nHausdorff Distances (95th percentile):")
-    print(f"  ET: {hd95_et".3f"}")
-    print(f"  TC: {hd95_tc".3f"}")
-    print(f"  WT: {hd95_wt".3f"}")
+    print(f"  ET: {hd95_et:.3f}")
+    print(f"  TC: {hd95_tc:.3f}")
+    print(f"  WT: {hd95_wt:.3f}")
 
     print("\nStandard Format Summary:")
     print(f"combined_results_seed{args.seed}.csv mean Dice score of {mean_dice_wt:.4f}, {mean_dice_tc:.4f}, and {mean_dice_et:.4f}, and Hausdorff distance (95%) of {hd95_wt:.3f}, {hd95_tc:.3f}, and {hd95_et:.3f} for the whole tumor, tumor core, and enhancing tumor, respectively")
