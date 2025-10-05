@@ -251,10 +251,19 @@ def compute_metrics_on_test(args):
 
         print(f"Debug: after crop - pred_a: {pred_a_cropped.shape}, pred_b: {pred_b_cropped.shape}")
 
+        # Crop target to match prediction size for evaluation
+        target_cropped = target_full[:, z_start:z_end, y_start:y_end, x_start:x_end]
+        print(f"Debug: target_cropped shape: {target_cropped.shape}")
+
         # Combine predictions intelligently
         combined_labelmap, pipeline_scores, region_choices = combine_predictions_intelligently(
-            pred_a_cropped, pred_b_cropped, target_full, crop_indexes
+            pred_a_cropped, pred_b_cropped, target_cropped, crop_indexes
         )
+
+        print(f"Debug: combined_labelmap shape: {combined_labelmap.shape}")
+        print(f"Debug: target_full shape for metrics: {target_full.shape}")
+
+        print(f"Debug: combined_labelmap shape: {combined_labelmap.shape}")
 
         # Save combined segmentation
         combined_image = sitk.GetImageFromArray(combined_labelmap)
