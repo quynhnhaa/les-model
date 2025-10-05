@@ -221,16 +221,35 @@ def compute_metrics_on_test(args):
             print(f"Warning: Missing prediction for patient {patient_id}")
             continue
 
-        # Crop predictions to match target size
-        z_slice = slice(crop_indexes[0][0].item(), crop_indexes[0][1].item())
-        y_slice = slice(crop_indexes[1][0].item(), crop_indexes[1][1].item())
-        x_slice = slice(crop_indexes[2][0].item(), crop_indexes[2][1].item())
-
-        pred_a_cropped = pred_a[z_slice, y_slice, x_slice]
-        pred_b_cropped = pred_b[z_slice, y_slice, x_slice]
-
-        # Get full target for evaluation
+        # Get target dimensions for proper cropping
         target_full = target[0].cpu().numpy()  # Remove batch dimension
+        target_z, target_y, target_x = target_full.shape[1], target_full.shape[2], target_full.shape[3]
+
+        print(f"Debug: target_full shape: {target_full.shape}")
+        print(f"Debug: crop_indexes: {crop_indexes}")
+        print(f"Debug: target dimensions: z={target_z}, y={target_y}, x={target_x}")
+
+        # Crop predictions to match target size exactly
+        # Ensure crop slices don't exceed prediction boundaries
+        z_start, z_end = crop_indexes[0][0].item(), crop_indexes[0][1].item()
+        y_start, y_end = crop_indexes[1][0].item(), crop_indexes[1][1].item()
+        x_start, x_end = crop_indexes[2][0].item(), crop_indexes[2][1].item()
+
+        # Clamp to prediction boundaries
+        z_start = max(0, z_start)
+        y_start = max(0, y_start)
+        x_start = max(0, x_start)
+
+        z_end = min(pred_a.shape[0], z_end)
+        y_end = min(pred_a.shape[1], y_end)
+        x_end = min(pred_a.shape[2], x_end)
+
+        print(f"Debug: clamped crop - z:({z_start},{z_end}), y:({y_start},{y_end}), x:({x_start},{x_end})")
+
+        pred_a_cropped = pred_a[z_start:z_end, y_start:y_end, x_start:x_end]
+        pred_b_cropped = pred_b[z_start:z_end, y_start:y_end, x_start:x_end]
+
+        print(f"Debug: after crop - pred_a: {pred_a_cropped.shape}, pred_b: {pred_b_cropped.shape}")
 
         # Combine predictions intelligently
         combined_labelmap, pipeline_scores, region_choices = combine_predictions_intelligently(
