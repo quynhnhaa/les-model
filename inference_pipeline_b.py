@@ -127,8 +127,10 @@ def generate_predictions(model, data_loader, args):
 
             # Save prediction as .nii.gz file
             labelmap_img = sitk.GetImageFromArray(labelmap)
-            ref_img = sitk.ReadImage(ref_path)
-            labelmap_img.CopyInformation(ref_img)
+            # Set basic image information without copying from reference
+            labelmap_img.SetSpacing((1.0, 1.0, 1.0))  # Default spacing
+            labelmap_img.SetOrigin((0.0, 0.0, 0.0))   # Default origin
+            labelmap_img.SetDirection((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))  # Identity direction
             output_path = pred_dir / f"{patient_id}.nii.gz"
             sitk.WriteImage(labelmap_img, str(output_path))
             print(f"Saved prediction: {output_path}")
