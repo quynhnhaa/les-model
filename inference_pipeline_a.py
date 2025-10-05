@@ -196,6 +196,15 @@ def save_results(all_metrics, args):
 
     # Calculate and save summary statistics
     summary = df.groupby('label')[METRICS].agg(['mean', 'std', 'min', 'max', 'count'])
+
+    # Add 95th percentile Hausdorff to summary
+    for label in ['ET', 'TC', 'WT']:
+        hd_values = df[df['label'] == label]['haussdorf'].dropna()
+        hd_values = hd_values[hd_values > 0]
+        if len(hd_values) > 0:
+            hd95 = np.percentile(hd_values, 95)
+            summary.loc[label, ('haussdorf', '95th_percentile')] = hd95
+
     summary_file = output_dir / f'pipeline_a_test_summary_seed{args.seed}.csv'
     summary.to_csv(summary_file)
     print(f"Saved summary statistics to: {summary_file}")
@@ -217,14 +226,21 @@ def save_results(all_metrics, args):
     print(f"  WT: {dice_means[2]:.4f}")
     print(f"  Mean: {np.mean(dice_means):.4f}")
 
-    print("\nMean Hausdorff Distances:")
-    hausdorff_means = df[df['label'] == 'ET']['haussdorf'].mean(), \
-                      df[df['label'] == 'TC']['haussdorf'].mean(), \
-                      df[df['label'] == 'WT']['haussdorf'].mean()
-    print(f"  ET: {hausdorff_means[0]:.2f}")
-    print(f"  TC: {hausdorff_means[1]:.2f}")
-    print(f"  WT: {hausdorff_means[2]:.2f}")
-    print(f"  Mean: {np.mean(hausdorff_means):.2f}")
+    print("\nHausdorff Distances (95th percentile):")
+    def get_95th_percentile_hausdorff(label):
+        hd_values = df[df['label'] == label]['haussdorf'].dropna()
+        hd_values = hd_values[hd_values > 0]  # Remove non-positive values
+        if len(hd_values) == 0:
+            return float('nan')
+        return float(np.percentile(hd_values, 95))
+
+    et_hd95 = get_95th_percentile_hausdorff('ET')
+    tc_hd95 = get_95th_percentile_hausdorff('TC')
+    wt_hd95 = get_95th_percentile_hausdorff('WT')
+
+    print(f"  ET: {et_hd95:.3f}")
+    print(f"  TC: {tc_hd95:.3f}")
+    print(f"  WT: {wt_hd95:.3f}")
 
     print("\n" + "="*60)
 
