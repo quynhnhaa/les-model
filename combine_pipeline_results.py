@@ -345,6 +345,7 @@ def main():
     parser.add_argument('--devices', required=False, type=str, help='CUDA devices (unused for pure eval)')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--workers', type=int, default=2)
+    parser.add_argument('--normalisation', type=str, default='minmax', choices=['minmax', 'zscore'])
     parser.add_argument('--pipeline_a_dir', type=str, required=True, help='Directory with Pipeline A predictions')
     parser.add_argument('--pipeline_b_dir', type=str, required=True, help='Directory with Pipeline B predictions')
     parser.add_argument('--output_dir', type=str, default='./combined_results',
